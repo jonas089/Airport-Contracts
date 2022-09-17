@@ -33,6 +33,22 @@ use utils::*;
 // Jonas ERC20 token on Casper
 
 #[no_mangle]
+fn init() {
+    // only installer can initialize the contract.
+    let owner_account_uref: URef = match runtime::get_key("owner") {
+        Some(uref) => uref,
+        None => runtime::revert(ApiError::MissingKey),
+    }
+    .into_uref()
+    .unwrap_or_revert();
+    let owner_account: AccountHash = storage::read_or_revert(owner_account_uref);
+    if runtime::get_caller() != owner_account {
+        runtime::revert(ApiError::PermissionDenied); // only owner account is eligible
+    }
+    storage::new_dictionary("balance").unwrap_or_revert();
+}
+
+#[no_mangle]
 fn Balance(caller_account_hash: AccountHash, caller_account_hash_as_string: &str) -> u64 {
     let balances_key: Key = match runtime::get_key("balance") {
         Some(key) => key,
@@ -95,6 +111,9 @@ pub extern "C" fn mint() {
     // TO BE ADDED: OWNER VALIDATION CHECK
 
     // Read current owner of the contract and revert if the caller isn't eligible to mint()
+
+    // anyone can mint for demo app.
+    /*
     let owner_account_uref: URef = match runtime::get_key("owner") {
         Some(uref) => uref,
         None => runtime::revert(ApiError::MissingKey),
@@ -105,6 +124,8 @@ pub extern "C" fn mint() {
     if runtime::get_caller() != owner_account {
         runtime::revert(ApiError::PermissionDenied); // only owner account is eligible
     }
+
+    */
     // to be done: add permissions so that only the owner can mint.
 
     // CIRCULATING SUPPLY
@@ -126,7 +147,7 @@ pub extern "C" fn mint() {
     let max_total_supply: u64 = storage::read_or_revert(max_total_supply_uref);
 
     // MINT AMOUNT
-    let mint_amount: u64 = 100;
+    let mint_amount: u64 = runtime::get_named_arg("amount");
 
     // Is the max_supply exceeded by this mint ? - if so, revert.
     if circulating_supply + mint_amount > max_total_supply {
@@ -162,7 +183,7 @@ pub extern "C" fn mint() {
 
 #[no_mangle]
 pub extern "C" fn burn() {
-    let caller_account_hash = runtime::get_named_arg("account");
+    let caller_account_hash: AccountHash = runtime::get_named_arg("account");
     let burn_amount: u64 = runtime::get_named_arg("amount");
 
     // TBD: move Uref conversion into a function if possible.
@@ -247,6 +268,14 @@ pub extern "C" fn call() {
             EntryPointType::Contract,
         );
 
+        let init = EntryPoint::new(
+            "init",
+            vec![],
+            CLType::Unit,
+            EntryPointAccess::Public,
+            EntryPointType::Contract,
+        );
+        entry_points.add_entry_point(init);
         entry_points.add_entry_point(mint);
         entry_points.add_entry_point(balance);
         entry_points.add_entry_point(updateOwner);
@@ -257,9 +286,6 @@ pub extern "C" fn call() {
     let named_keys = {
         let mut named_keys = NamedKeys::new();
         named_keys.insert("installer".to_string(), runtime::get_caller().into());
-        // Warning: if key exists on different contract, deploy will fail ? to be investigated.
-        let balances_dict = storage::new_dictionary("balance").unwrap_or_revert();
-        named_keys.insert("balance".to_string(), balances_dict.into());
 
         let owner_account: URef = storage::new_uref("owner");
         named_keys.insert("owner".to_string(), owner_account.into());

@@ -361,28 +361,7 @@ pub extern "C" fn mint() {
     // The contract owner can toggle the minting behavior on and off over time.
     // The contract is toggled on by default.
     let account: AccountHash = runtime::get_caller();
-    let contract_hash: ContractHash = runtime::get_named_arg("CONTRACT");
-    // my custom token
-    let price = U256::from(1);
-    let balance: U256 = runtime::call_contract::<U256>(
-        contract_hash,
-        "balanceOf",
-        runtime_args! {
-            "account" => account
-        },
-    );
-    if balance < price {
-        runtime::revert(NFTCoreError::ERC20BalanceTooLow);
-    }
-
-    runtime::call_contract::<()>(
-        contract_hash,
-        "burn",
-        runtime_args! {
-            "account" => account
-        },
-    );
-
+    
     let minting_status = utils::get_stored_value_with_user_errors::<bool>(
         ALLOW_MINTING,
         NFTCoreError::MissingAllowMinting,
@@ -1496,7 +1475,6 @@ fn install_nft_contract() -> (ContractHash, ContractVersion) {
         entry_points.add_entry_point(set_token_metadata);
         entry_points
     };
-    let burn_account: AccountHash = runtime::get_named_arg("BURN_ACCOUNT");
     let named_keys = {
         let mut named_keys = NamedKeys::new();
         // set installer.
