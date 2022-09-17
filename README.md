@@ -1,1 +1,4 @@
-ERC20 contract hash: hash-0c768d46714064e4dda1b5e712bd5dfb0e260be2ff43b513adae6f4da6b230fa (V0.0.0)
+ERC20 contract hash:
+hash-2cb1460c399f33ca2d5d5deb29f7bbf4cf6b419393465f82caec833c4c7d2406
+NFT contract hash:
+hash-6446788b0f7fbdd70f83d84145fc6ce90ef50b936e878fda0907024f88673ee0

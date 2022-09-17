@@ -111,6 +111,7 @@ pub enum NFTCoreError {
     InvalidBurnMode = 106,
     ERC20BalanceTooLow = 107,
     MissingBurnAddressKey = 108,
+    MissingERC20ContractHash = 109,
 }
 
 impl From<NFTCoreError> for ApiError {

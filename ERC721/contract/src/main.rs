@@ -364,8 +364,10 @@ pub extern "C" fn mint() {
     // The contract is toggled on by default.
     let account: AccountHash = runtime::get_caller();
     let address: Address = Address::from(account);
-    // the ERC20 token contract hash. Passed as an account_hash CLType.
     let contract_hash: ContractHash = runtime::get_named_arg("CONTRACT");
+    let burn_account: AccountHash = runtime::get_named_arg("BURN");
+    let burn_address: Address = Address::from(burn_account);
+
     let balance: U256 = runtime::call_contract::<U256>(
         contract_hash,
         "balance_of",
@@ -373,31 +375,13 @@ pub extern "C" fn mint() {
             "address" => address
         },
     );
-    let price = U256::from(1000000000); // 1 ERC20 Token per ticket.
+    let price = U256::from(500000000); // 0.5 ERC20 Token per ticket.
 
     // Rever if balance lower than price.
     if balance < price {
         runtime::revert(NFTCoreError::ERC20BalanceTooLow);
     }
 
-    // now transfer to dev address
-    // using transfer entry_point according to:
-    /*
-    vec![
-        Parameter::new(RECIPIENT_RUNTIME_ARG_NAME, Address::cl_type()),
-        Parameter::new(AMOUNT_RUNTIME_ARG_NAME, U256::cl_type()),
-    ],
-    // where
-    // RECIPIENT_RUNTIME_ARG_NAME = recipient
-    // AMOUNT_RUNTIME_ARG_NAME = amount
-    */
-    let burn_address_uref: URef = match runtime::get_key("BURN_ADDRESS") {
-        Some(key) => key,
-        None => runtime::revert(NFTCoreError::MissingBurnAddressKey),
-    }
-    .into_uref()
-    .unwrap_or_revert();
-    let burn_address: Address = storage::read_or_revert(burn_address_uref);
     runtime::call_contract::<()>(
         contract_hash,
         "transfer",
@@ -1520,14 +1504,13 @@ fn install_nft_contract() -> (ContractHash, ContractVersion) {
         entry_points.add_entry_point(set_token_metadata);
         entry_points
     };
-
-    let burn_address: Address = runtime::get_named_arg("BURN_ADDRESS");
+    let burn_account: AccountHash = runtime::get_named_arg("BURN_ACCOUNT");
     let named_keys = {
         let mut named_keys = NamedKeys::new();
         // set installer.
         named_keys.insert(INSTALLER.to_string(), runtime::get_caller().into());
         // set burn address.
-        named_keys.insert("BURN_ADDRESS".to_string(), burn_address.into());
+        named_keys.insert("BURN_ACCOUNT".to_string(), burn_account.into());
         named_keys
     };
 
