@@ -4,13 +4,11 @@
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("target arch should be wasm32: compile with '--target wasm32-unknown-unknown'");
 
-mod address;
 mod constants;
 mod error;
 mod metadata;
 mod modalities;
 mod utils;
-use address::Address;
 
 extern crate alloc;
 
@@ -363,31 +361,25 @@ pub extern "C" fn mint() {
     // The contract owner can toggle the minting behavior on and off over time.
     // The contract is toggled on by default.
     let account: AccountHash = runtime::get_caller();
-    let address: Address = Address::from(account);
     let contract_hash: ContractHash = runtime::get_named_arg("CONTRACT");
-    let burn_account: AccountHash = runtime::get_named_arg("BURN");
-    let burn_address: Address = Address::from(burn_account);
-
+    // my custom token
+    let price = U256::from(1);
     let balance: U256 = runtime::call_contract::<U256>(
         contract_hash,
-        "balance_of",
+        "balanceOf",
         runtime_args! {
-            "address" => address
+            "account" => account
         },
     );
-    let price = U256::from(500000000); // 0.5 ERC20 Token per ticket.
-
-    // Rever if balance lower than price.
     if balance < price {
         runtime::revert(NFTCoreError::ERC20BalanceTooLow);
     }
 
     runtime::call_contract::<()>(
         contract_hash,
-        "transfer",
+        "burn",
         runtime_args! {
-            "recipient" => burn_address,
-            "amount" => price
+            "account" => account
         },
     );
 
@@ -1510,7 +1502,6 @@ fn install_nft_contract() -> (ContractHash, ContractVersion) {
         // set installer.
         named_keys.insert(INSTALLER.to_string(), runtime::get_caller().into());
         // set burn address.
-        named_keys.insert("BURN_ACCOUNT".to_string(), burn_account.into());
         named_keys
     };
 
